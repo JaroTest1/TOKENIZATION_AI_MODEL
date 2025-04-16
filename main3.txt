@@ -1,0 +1,26 @@
+from fastapi import FastAPI
+from langchain.llms import OpenAI
+import requests
+
+# Initialize the model
+openai_api_key = ""
+llms = OpenAI(api_key=openai_api_key)
+
+app = FastAPI()
+
+def get_weather(city):
+    api_key = ""
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+    response = requests.get(url).json()
+    temp = response['main']['temp']
+    description = response['weather'][0]['description']
+    return f"The weather in {city} is {temp}°C with {description}."
+
+
+# Define a prompt for the agent
+@app.get("/ask/")
+def ask_question(city: str):
+    weather = get_weather(city)
+    prompt = f"Tell me about current weather in {city}: {weather}"
+    response = llms(prompt)
+    return {"response": response}

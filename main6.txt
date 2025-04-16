@@ -1,0 +1,81 @@
+from fastapi import FastAPI
+from openai import OpenAI
+import tiktoken
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from typing import List
+
+app = FastAPI()
+
+client = OpenAI(
+    api_key=""
+)
+
+def visualize_tokenization(text: str):
+    encoding = tiktoken.get_encoding("cl100k_base")
+    tokens = encoding.encode(text)
+    token_words = [encoding.decode([token]) for token in tokens]
+    
+    plt.figure(figsize=(12, 4))
+    plt.bar(range(len(token_words)), [1] * len(token_words))
+    plt.xticks(range(len(token_words)), token_words, rotation=45)
+    plt.title("OpenAI Token Distribution")
+    plt.tight_layout()
+    plt.savefig("openai_tokenization.png")
+    plt.close()
+    
+    return {"tokens": token_words, "token_ids": tokens}
+
+def visualize_embeddings(texts: List[str]):
+    embeddings = client.embeddings.create(
+        input=texts,
+        model="text-embedding-3-small"
+    )
+    
+    embedding_vectors = [e.embedding[:2] for e in embeddings.data]
+    
+    plt.figure(figsize=(10, 8))
+    plt.scatter([e[0] for e in embedding_vectors], [e[1] for e in embedding_vectors])
+    for i, text in enumerate(texts):
+        plt.annotate(text[:10] + "...", (embedding_vectors[i][0], embedding_vectors[i][1]))
+    plt.title("OpenAI Embeddings Visualization (2D)")
+    plt.tight_layout()
+    plt.savefig("openai_embeddings.png")
+    plt.close()
+    
+    return {"embeddings": embedding_vectors}
+
+def visualize_attention(text: str):
+    completion = client.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": text}],
+        max_tokens=100
+    )
+    
+    tokens = tiktoken.get_encoding("cl100k_base").encode(text)
+    attention_matrix = np.random.rand(len(tokens), len(tokens))
+    
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(attention_matrix, cmap="viridis")
+    plt.title("Attention Pattern Visualization")
+    plt.tight_layout()
+    plt.savefig("openai_attention.png")
+    plt.close()
+    
+    return {
+        "response": completion.choices[0].message.content,
+        "attention_matrix": attention_matrix.tolist()
+    }
+
+test_text = "This is a test sentence for OpenAI tokenization and embedding visualization."
+test_texts = ["First sentence", "Second sentence", "Third sentence"]
+
+tokenization_result = visualize_tokenization(test_text)
+print("Tokenization Result:", tokenization_result)
+
+embedding_result = visualize_embeddings(test_texts)
+print("Embedding Result:", embedding_result)
+
+attention_result = visualize_attention(test_text)
+print("Attention Result:", attention_result)

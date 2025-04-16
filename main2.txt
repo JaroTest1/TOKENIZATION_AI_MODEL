@@ -1,0 +1,46 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from openai import OpenAI
+import httpx
+import os
+
+# FastAPI instance
+app = FastAPI()
+
+# API request model
+class RequestBody(BaseModel):
+    prompt: str
+
+# OpenAI API key from environment variable
+openai_api_key = ""
+
+
+@app.post("/generate-code")
+async def generate_code(body: RequestBody):
+    openai_url = "https://api.openai.com/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {openai_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    data = {
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": body.prompt}],
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(openai_url, headers=headers, json=data)
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Error from OpenAI API")
+
+    response_data = response.json()
+
+    # Check if the response contains 'choices'
+    choices = response_data.get("choices")
+    if not choices:
+        raise HTTPException(status_code=500, detail="Invalid response from OpenAI API")
+
+    # Extract and return the content
+    return {"code": choices[0].get("message").get("content")}

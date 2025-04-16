@@ -1,0 +1,71 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from openai import OpenAI
+import httpx
+import os
+import tiktoken
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+
+app = FastAPI()
+
+client = OpenAI(
+    api_key=""
+)
+
+def visualize_tokens(tokens, title):
+    plt.figure(figsize=(15, 5))
+    plt.bar(range(len(tokens)), tokens)
+    plt.title(f"Token Values for: {title}")
+    plt.xlabel("Token Position")
+    plt.ylabel("Token Value")
+    plt.show()
+
+def visualize_embedding(embedding, title):
+    plt.figure(figsize=(15, 5))
+    plt.plot(embedding)
+    plt.title(f"Embedding Vector Visualization for: {title}")
+    plt.xlabel("Dimension")
+    plt.ylabel("Value")
+    plt.show()
+
+    plt.figure(figsize=(10, 6))
+    sns.histplot(embedding, bins=50)
+    plt.title(f"Embedding Value Distribution for: {title}")
+    plt.xlabel("Value")
+    plt.ylabel("Count")
+    plt.show()
+
+chat_input = "NTP Poland EDU 4"
+chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": chat_input,
+        }
+    ],
+    model="gpt-4o",
+)
+
+encoding = tiktoken.encoding_for_model("gpt-4")
+chat_tokens = encoding.encode(chat_input)
+print(f"Chat input tokens: {chat_tokens}")
+print(f"Number of tokens in chat input: {len(chat_tokens)}")
+visualize_tokens(chat_tokens, "Chat Input")
+
+embedding_input = "Your text string goes here"
+response = client.embeddings.create(
+    input=embedding_input,
+    model="text-embedding-3-small"
+)
+
+embedding_tokens = encoding.encode(embedding_input)
+print(f"Embedding input tokens: {embedding_tokens}")
+print(f"Number of tokens in embedding input: {len(embedding_tokens)}")
+visualize_tokens(embedding_tokens, "Embedding Input")
+
+embedding_vector = response.data[0].embedding
+print("Embedding vector:")
+print(embedding_vector)
+visualize_embedding(embedding_vector, embedding_input)
